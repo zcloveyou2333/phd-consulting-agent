@@ -1,9 +1,15 @@
 from __future__ import annotations
 
+import os
+
+from openai import OpenAI
+from dotenv import load_dotenv
+
 from phd_consulting_agent.models import GeneratedOutput, OutputKind, ProvenanceKind, SourceFact
 from phd_consulting_agent.skill_contracts import SkillRequest
 from phd_consulting_agent.skill_prompts import build_prompt
 
+load_dotenv()
 
 SKILL_OUTPUTS = {
     "student_profile_analysis": (OutputKind.BACKGROUND_ANALYSIS, "背景分析"),
@@ -34,3 +40,49 @@ class MockSkillRunner:
                 )
             ],
         )
+
+
+class RealSkillRunner:
+    def __init__(self):
+        self.client = OpenAI(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            base_url=os.getenv("OPENAI_BASE_URL"),
+        )
+        self.model = os.getenv("MODEL_NAME", "gpt-4o-mini")
+
+    def run(self, skill_name: str, request: SkillRequest) -> GeneratedOutput:
+        if skill_name not in SKILL_OUTPUTS:
+            raise ValueError(f"Unknown skill: {skill_name}")
+
+        kind, title = SKILL_OUTPUTS[skill_name]
+        prompt = build_prompt(skill_name, request)
+
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": "You are a professional PhD consulting expert."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.7,
+        )
+
+        return GeneratedOutput(
+            case_id=request.case.id,
+            kind=kind,
+            title=title,
+            content=response.choices[0].message.content,
+            sources=[
+                SourceFact(
+                    kind=ProvenanceKind.MODEL_STRATEGY,
+                    label="llm_runner",
+                    value="Generated via LLM",
+                )
+            ],
+        )
+
+
+def get_runner():
+    mode = os.getenv("RUNNER_MODE", "mock")
+    if mode == "real":
+        return RealSkillRunner()
+    return MockSkillRunner()
