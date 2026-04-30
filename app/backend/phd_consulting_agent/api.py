@@ -10,7 +10,7 @@ from phd_consulting_agent.config import default_config
 from phd_consulting_agent.gemini_history import load_relevant_index
 from phd_consulting_agent.models import CaseCreate, GeneratedOutput, StudentCase
 from phd_consulting_agent.skill_contracts import SkillRequest
-from phd_consulting_agent.skill_runner import MockSkillRunner
+from phd_consulting_agent.skill_runner import get_runner
 from phd_consulting_agent.storage import CaseRepository, init_db
 
 
@@ -26,7 +26,8 @@ def create_app(database_path: Path | None = None) -> FastAPI:
     db_path = database_path or config.database_path
     init_db(db_path)
     repo = CaseRepository(db_path)
-    runner = MockSkillRunner()
+    runner = get_runner()
+
     app = FastAPI(title="PhD Consulting Agent")
     app.add_middleware(
         CORSMiddleware,
@@ -66,6 +67,7 @@ def create_app(database_path: Path | None = None) -> FastAPI:
         case = repo.get_case(case_id)
         if case is None:
             raise HTTPException(status_code=404, detail="Case not found")
+
         request = SkillRequest(
             case=case,
             user_instruction=body.user_instruction,
@@ -73,6 +75,7 @@ def create_app(database_path: Path | None = None) -> FastAPI:
             target_regions=body.target_regions,
             document_text=body.document_text,
         )
+
         output = runner.run(skill_name, request)
         return repo.save_output(output)
 
