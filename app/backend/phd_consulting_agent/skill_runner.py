@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
-from openai import OpenAI
 from dotenv import load_dotenv
+from openai import OpenAI
 
 from phd_consulting_agent.models import GeneratedOutput, OutputKind, ProvenanceKind, SourceFact
 from phd_consulting_agent.skill_contracts import SkillRequest
 from phd_consulting_agent.skill_prompts import build_prompt
 
-load_dotenv()
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+load_dotenv(BACKEND_DIR / ".env")
 
 SKILL_OUTPUTS = {
     "student_profile_analysis": (OutputKind.BACKGROUND_ANALYSIS, "背景分析"),
@@ -44,9 +46,19 @@ class MockSkillRunner:
 
 class RealSkillRunner:
     def __init__(self):
+        api_key = os.getenv("OPENAI_API_KEY")
+        base_url = os.getenv("OPENAI_BASE_URL")
+
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY is missing. Please set it in app/backend/.env")
+        if not base_url:
+            raise ValueError("OPENAI_BASE_URL is missing. Please set it in app/backend/.env")
+        if not base_url.startswith(("http://", "https://")):
+            raise ValueError("OPENAI_BASE_URL must start with http:// or https://")
+
         self.client = OpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv("OPENAI_BASE_URL"),
+            api_key=api_key,
+            base_url=base_url.rstrip("/"),
         )
         self.model = os.getenv("MODEL_NAME", "gpt-4o-mini")
 
@@ -66,23 +78,25 @@ class RealSkillRunner:
             temperature=0.7,
         )
 
+        content = response.choices[0].message.content or ""
+
         return GeneratedOutput(
             case_id=request.case.id,
             kind=kind,
             title=title,
-            content=response.choices[0].message.content,
+            content=content,
             sources=[
                 SourceFact(
                     kind=ProvenanceKind.MODEL_STRATEGY,
                     label="llm_runner",
-                    value="Generated via LLM",
+                    value=f"Generated via LLM model: {self.model}",
                 )
             ],
         )
 
 
 def get_runner():
-    mode = os.getenv("RUNNER_MODE", "mock")
+    mode = os.getenv("RUNNER_MODE", "mock").strip().lower()
     if mode == "real":
         return RealSkillRunner()
     return MockSkillRunner()
