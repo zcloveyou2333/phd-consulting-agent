@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node / frontend
+node_modules/
+dist/
+build/
+
+# Local app/runtime data
+data/
+Takeout/
+*.sqlite3
+*.db
+
+# External upstream checkout; add as a submodule explicitly if needed later.
+hermes-agent/
+
+# Private exports and uploads
+*.zip
+
+# Environment files
+.env
+.env.*
