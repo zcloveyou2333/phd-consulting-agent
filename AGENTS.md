@@ -51,6 +51,46 @@ python3 scripts/clean_gemini_takeout.py \
   --output-dir "/Users/zhangchi/Projects/python/phd-consulting-agent/data/cleaned/gemini_takeout"
 ```
 
+Do not commit raw exports or derived private data. The root `.gitignore` should
+exclude `Takeout/`, `data/`, `*.zip`, local databases, environment files, and
+the upstream `hermes-agent/` checkout.
+
+## GitHub Remote And Push Workflow
+
+The root project repository is connected to:
+
+`https://github.com/zcloveyou2333/phd-consulting-agent.git`
+
+Use GitHub CLI authentication for pushes. Do not put GitHub usernames,
+passwords, or tokens into remotes, scripts, shell history, or documentation.
+GitHub does not support password-based `git push` over HTTPS.
+
+Recommended setup:
+
+```bash
+gh auth login --hostname github.com --git-protocol https --web
+gh auth setup-git
+```
+
+Then push normally:
+
+```bash
+git push -u origin main
+```
+
+If `git push` fails with `could not read Username for 'https://github.com'`,
+run:
+
+```bash
+gh auth status
+gh auth setup-git
+git push -u origin main
+```
+
+Current initial commit pushed to `origin/main`:
+
+`c95929e chore: initial project planning`
+
 ## Real Workflow Observed From Data
 
 The cleaned Gemini data shows that the consultant's actual workflow is not just
@@ -199,4 +239,3 @@ Later version:
   locally?
 - What is the minimum acceptable UI for the consultant to use this in real work:
   one-page case workbench, multi-step wizard, or chat-first interface?
-
