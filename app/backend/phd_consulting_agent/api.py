@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from phd_consulting_agent.config import default_config
@@ -27,6 +28,13 @@ def create_app(database_path: Path | None = None) -> FastAPI:
     repo = CaseRepository(db_path)
     runner = MockSkillRunner()
     app = FastAPI(title="PhD Consulting Agent")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://127.0.0.1:5174"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.get("/health")
     def health() -> dict[str, str]:
